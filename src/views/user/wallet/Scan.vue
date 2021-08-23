@@ -10,23 +10,21 @@
 <script>
 let scan = null
 export default {
-  data () {
+  data() {
     return {
       creator: this.$route.query.creator
     }
   },
   methods: {
-
     // 创建扫描控件
-    startRecognize () {
+    startRecognize() {
       let that = this
-      // that.$router.replace({ path: '/user/transfer', query: { creator: that.creator, recipient: 123 } })
       if (!window.plus) return
 
       scan = new window.plus.barcode.Barcode('bcid')
       scan.onmarked = onmarked
       that.startScan()
-      function onmarked (type, result, file) {
+      function onmarked(type, result, file) {
         switch (type) {
           case window.plus.barcode.QR:
             type = 'QR'
@@ -46,38 +44,38 @@ export default {
           let codeInfo = JSON.parse(result)
           if (codeInfo.type === 'trans') {
             that.closeScan()
-            that.$router.replace({ path: '/user/transfer', query: { creator: that.creator, recipient: codeInfo.address } })
+            that.$router.replace({ path: '/user/wallet/transfer', query: { creator: that.creator, recipient: codeInfo.address } })
           }
         } catch (e) {
           console.log('error：' + result + '!!!' + e)
           that.cancelScan()
-          alert('扫码失败，请重试')
+          alert('error')
           that.startScan()
         }
       }
     },
     // 开始扫描
-    startScan () {
+    startScan() {
       if (!window.plus) return
       scan.start()
     },
     // 关闭扫描
-    cancelScan () {
+    cancelScan() {
       if (!window.plus) return
       scan.cancel()
     },
     // 关闭条码识别控件
-    closeScan () {
+    closeScan() {
       if (!window.plus) return
       scan.close()
     }
   },
-  mounted () {
+  mounted() {
     this.startRecognize()
   },
-  beforeDestroy () {
+  beforeDestroy() {
     this.closeScan()
-  }
+  },
 }
 </script>
 <style lang="less">

@@ -12,22 +12,21 @@
         <p>web：{{item.data.web}}</p>
         <p>logo：{{item.assetName}}</p>
         <p>简介：{{decodeURIComponent(item.data.content)}}</p>
-        <p><button @click="toVerify(item.signature)">通过</button></p>
+        <p><button @click="doVerify(item.signature)">通过</button></p>
       </li>
     </ul>
   </div>
 </template>
 
 <script>
-import { decryptPwd, doVerify } from '@/assets/js/utils.js'
 export default {
-  data () {
+  data() {
     return {
       verify: null
     }
   },
   computed: {
-    newVerify () {
+    newVerify() {
       return this.verify ? this.verify.map(el => {
         el.data = JSON.parse(el.data)
         return el
@@ -35,50 +34,33 @@ export default {
     }
   },
   methods: {
-    getVerify () {
-      this.axios.get('transactions/pending?txGroupId=2&limit=100').then((response) => {
-        // this.axios.get('transactions/search?txType=ISSUE_ASSET&confirmationStatus=CONFIRMED&limit=20').then((response) => {
-        // console.log(response.data)
-        this.verify = response.data
-      }).catch(function (error) {
+    getVerify() {
+      this.$api.getVerify().then(res => {
+        this.verify = res.data
+      }).catch(error => {
         console.log(error)
       })
     },
-    toVerify (signature) {
-      let salt = this.$store.getters.salt
-      let accountInfo = JSON.parse(localStorage.getItem('AccountList')).filter(item => {
-        return item.isDefault === true
-      })
-      this.$messagebox.prompt(' ', '请输入密码', { inputType: 'password' }).then(async ({ value, action }) => {
-        var privateKey = decryptPwd(accountInfo[0].code, value, salt)
-        if (!privateKey) {
-          this.$toast('密码错误')
-          return
+    doVerify(signature) {
+      let account = this.$mcf.getAccountByStorage(this.$mcf.getStorage('defaultAccount').address)
+      let config = {
+        creator: this.$mcf.getStorage('defaultAccount').address,
+        signature: signature,
+      }
+      this.$mcf.transactions('GROUP_APPROVAL', { ...config, ...account }).then(res => {
+        if (res.data) {
+          this.$notify({ type: 'success', message: '审核提交成功' })
         }
-        let creatorInfo = {
-          address: accountInfo[0].address,
-          privateKey: privateKey
-        }
-        try {
-          var result = await doVerify(creatorInfo, signature)
-          // console.log(result)
-          if (result.data === true) {
-            this.$toast('转账成功')
-          }
-        } catch (error) {
-          console.log(error)
-          this.$toast('转账失败:' + error.message)
-        }
-      }).catch((error) => {
+      }).catch(error => {
         console.log(error)
-        this.$toast('操作取消')
+        this.$notify({ type: 'danger', message: '审核提交失败' })
       })
     },
-    cutAddr (address) {
+    cutAddr(address) {
       return address.slice(0, 10) + '...' + address.slice(-10)
     }
   },
-  mounted () {
+  mounted() {
     this.getVerify()
   }
 }

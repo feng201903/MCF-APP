@@ -1,22 +1,43 @@
 <template>
   <div>
-    <mt-header fixed :title="$t('title')[$route.meta.title]">
-      <mt-button icon="back" @click="goBack" slot="left" v-show="!$route.meta.hiddenBack"></mt-button>
-    </mt-header>
-    <router-view />
+    <van-cell-group>
+      <van-cell :title="$t('user.myWallet')" is-link to="/user/wallet" />
+      <van-cell :title="$t('user.myAsset')" is-link to="/user/wallet/assets" />
+      <van-cell :title="$t('user.messages')" is-link to="/user/message" />
+      <van-cell :title="$t('user.issueAsset')" is-link to="/user/issue" />
+      <van-cell title="审核任务" is-link to="/user/verify" v-show="isAdmin" />
+    </van-cell-group>
   </div>
 </template>
 
 <script>
 export default {
-  methods: {
-    goBack () {
-      // window.history.length > 1
-      //   ? this.$router.go(-1)
-      //   : this.$router.push(user)
-      this.$route.meta.back ? this.$router.push({ name: this.$route.meta.back }) : this.$router.go(-1)
+  data() {
+    return {
+      isAdmin: false,
     }
-  }
+  },
+  methods: {
+    getAdmin() {
+      this.$api.getAdmin().then(res => {
+        let admin = res.data.members
+        for (var key in admin) {
+          if (admin[key].member === this.$mcf.getStorage('defaultAccount').address) {
+            this.isAdmin = true
+            break
+          }
+        }
+      }).catch(err => {
+        console.log(err)
+      })
+    },
+    toAsset() {
+      
+    }
+  },
+  mounted() {
+    this.getAdmin()
+  },
 }
 </script>
 

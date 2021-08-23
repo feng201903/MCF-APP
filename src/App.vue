@@ -1,68 +1,83 @@
 <template>
   <div id="app">
-    <!-- <header>标题</header> -->
-    <section class="content">
-      <router-view />
-    </section>
-    <mt-tabbar v-model="selected" :fixed='true' v-show="$route.meta.showTabbar">
-      <mt-tab-item id="market">
-        <div class="mint-tab-item-icon">
-          <i class="iconfont icon-hangqing-copy"></i>
-        </div>
-        {{$t("tab.tab1")}}
-      </mt-tab-item>
-      <mt-tab-item id="deal">
-        <div class="mint-tab-item-icon">
-          <i class="iconfont icon-jiaoyi"></i>
-        </div>
-        {{$t("tab.tab2")}}
-      </mt-tab-item>
-      <mt-tab-item id="user">
-        <div class="mint-tab-item-icon">
-          <i class="iconfont icon-gerenzhongxin"></i>
-        </div>
-        {{$t("tab.tab3")}}
-      </mt-tab-item>
-    </mt-tabbar>
+    <!-- <van-nav-bar :title="$route.meta.title" :left-arrow="$route.meta.showBack" @click-left="onClickLeft" fixed :placeholder=true v-if='$route.meta.title' /> -->
+    <van-nav-bar :title="$t(`nav.${$route.meta.title}`)" :left-arrow="$route.meta.showBack" @click-left="onClickLeft" fixed :placeholder=true v-if='$route.meta.title' />
+
+    <keep-alive :include="keepAlive">
+      <router-view :allKnownAssets="allKnownAssets" @updateAssetsInfo="updateAssetsInfo" @setKeepAlive="setKeepAlive" />
+    </keep-alive>
+
+    <!-- <router-view v-if="!$route.meta.keepAlive" :allKnownAssets="allKnownAssets" @updateAssetsInfo="updateAssetsInfo" /> -->
+    <van-tabbar v-show="$route.meta.showTabbar" route>
+      <van-tabbar-item to="/" icon="chart-trending-o">{{$t('tab.market')}}</van-tabbar-item>
+      <van-tabbar-item to="/trade" icon="balance-list-o">{{$t('tab.trade')}}</van-tabbar-item>
+      <van-tabbar-item to="/user" icon="user-o">{{$t('tab.user')}}</van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
 <script>
+import nacl_factory from '@/assets/js/nacl_factory.min.js'
 export default {
-  data () {
+  data() {
     return {
-      selected: 'market'
+      allKnownAssets: [],
+      keepAlive: []
     }
   },
   methods: {
-    getAllAsset () {
-      // console.log('获取全部资产')
-      this.axios.get('assets?includeData=true&limit=0&offset=0&reverse=false').then((response) => {
-        // console.log(response.data)
-        localStorage.setItem('allAsset', JSON.stringify(response.data))
-      }).catch((err) => {
-        console.log(err)
+    getAllKnownAssets() {
+      this.$api.getAllKnownAssets().then(res => {
+        this.allKnownAssets = res.data
+      })
+    },
+    updateAssetsInfo(config) {
+      // console.log(config)
+      this.$set(this.allKnownAssets, config.index + 1, config.item)
+    },
+    onClickLeft() {
+      if (this.$route.meta.back) {
+        let query = {}
+        switch (this.$route.meta.back) {
+          case 'Assets':
+            query = { address: this.$route.query.creator }
+        }
+        this.$router.push({ name: this.$route.meta.back, query })
+      } else {
+        this.$router.go(-1)
+      }
+    },
+    setKeepAlive(name, type) {
+      let index = this.keepAlive.indexOf(name)
+      if (type === 'push') {
+        if (index === -1) {
+          this.keepAlive.push(name)
+        }
+      } else {
+        if (index > -1) {
+          this.keepAlive.splice(index, 1)
+        }
+      }
+    }
+  },
+  created() {
+    this.getAllKnownAssets()
+    localStorage.removeItem('tempAccount')
+    if (!localStorage.getItem('salt')) {
+      nacl_factory.instantiate(function (nacl) {
+        var salt = nacl.to_hex(nacl.crypto_secretbox_random_nonce())
+        localStorage.setItem('salt', salt)
       })
     }
   },
-  created () {
-    this.getAllAsset()
-  },
-  watch: {
-    $route () {
-      this.selected = this.$route.name
-    },
-    selected (newValue, oldValue) {
-      if (this.$route.name !== newValue) {
-        this.$router.push({ name: newValue })
-      }
-    }
+  beforeCreate() {
+    document.querySelector('body').setAttribute('style', 'background-color:rgba(250, 250, 250, 0.1)')
   }
 }
 </script>
 
-<style lang="less">
-.iconfont::before {
-  font-size: 24px;
+<style scoped>
+::v-deep .van-nav-bar .van-icon {
+  color: black;
 }
 </style>

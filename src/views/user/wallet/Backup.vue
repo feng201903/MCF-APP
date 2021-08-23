@@ -1,79 +1,99 @@
 <template>
-  <div>
-    <mt-tab-container v-model="active">
-      <mt-tab-container-item id="step1">
-        <div class="step step1">
-          <img src="@/assets/images/logo.png">
-          <h3>{{$t('page.user.BackupText1')}}</h3>
-          <p>{{$t('page.user.BackupText2')}}</p>
-          <div class="btn-group">
-            <button class="mcf-btn btn-blue" @click="backup">{{$t('page.user.btnBackup')}}</button>
-          </div>
-        </div>
-      </mt-tab-container-item>
+  <div class="backup">
+    <div class="step step1" v-show="step===1">
+      <img src="@/assets/images/logo.png">
+      <h3>{{$t('user.backup.text1')}}</h3>
+      <p>{{$t('user.backup.text2')}}</p>
+    </div>
 
-      <mt-tab-container-item id="step2">
-        <div class="step step2">
-          <h4>{{$t('page.user.BackupText3')}}</h4>
-          <div class="warning">
-            <div class="mark">
-              <div>
-                <div>!</div>
-              </div>
-            </div>
-            <div class="text">
-              <p>{{$t('page.user.BackupText4')}}</p>
-              <p><span>{{$t('page.user.BackupText5')}}</span>{{$t('page.user.BackupText6')}}</p>
-            </div>
-          </div>
-          <div class="words">{{mnemonic}}</div>
-          <div class="btn-group">
-            <button class="mcf-btn btn-blue" @click="step = 3">{{$t('page.user.btnNext')}}</button>
-          </div>
-        </div>
-      </mt-tab-container-item>
+    <div class="step step2" v-show="step===2">
+      <h4>{{$t('user.backup.text4')}}</h4>
+      <div class="tips">
+        <p>{{$t('user.backup.text5')}}</p>
+        <p><span class="warning">{{$t('user.backup.text6')}}</span>{{$t('user.backup.text7')}}</p>
+      </div>
+      <div class="words">{{tempAccount.mnemonic}}</div>
+    </div>
 
-      <mt-tab-container-item id="step3">
-        <div class="step step3">
-          <h4>{{$t('page.user.BackupText8')}}</h4>
-          <div class="words-box" id="str-mnemonic">{{strMnemonic}}</div>
-          <div class="words-select-box">
-            <button class="select-item" v-for="(item,index) in arrMnemonic" :key="index" @click="selectWord(item,index)">{{ item }}</button>
-          </div>
-          <div class="btn-group">
-            <button class="mcf-btn btn-blue" @click="subCreate">{{$t('page.trade.btnConfirm')}}</button>
-            <button class="mcf-btn btn-orange" @click="upsetWords">{{$t('page.user.btnReset')}}</button>
-          </div>
-        </div>
-      </mt-tab-container-item>
-    </mt-tab-container>
+    <div class="step step3" v-show="step===3">
+      <h4>{{$t('user.backup.text10')}}</h4>
+      <div class="words-box" id="str-mnemonic">{{strMnemonic}}</div>
+      <div class="words-select-box">
+        <div class="select-item" v-for="(item,index) in arrMnemonic" :key="index" @click="selectWord(item,index)">{{ item }}</div>
+      </div>
+    </div>
+
+    <van-dialog v-model="show" :title="$t('mcf.enterPwd')" show-cancel-button @confirm="confirm" :confirmButtonText="$t('common.btnConfirm')" :cancelButtonText="$t('common.btnCancel')">
+      <input type="password" class="password-input" v-model="password" />
+    </van-dialog>
+
+    <div class="btn">
+      <van-button round block type="info" @click="resetWords" v-if="step===3" color="#FFBE4E" style="margin-bottom:10px">{{$t('user.backup.reset')}}</van-button>
+      <van-button round block type="info" @click="nextStep">{{btnText}}</van-button>
+    </div>
   </div>
 </template>
 
 <script>
-import { encryptPwd } from '@/assets/js/utils.js'
 export default {
-  data () {
+  data() {
     return {
       step: 1,
-      active: 'step1',
-      mnemonic: '',
-      arrMnemonic: '',
-      strMnemonic: ''
+      show: false,
+      password: '',
+      btnText: this.$t('user.backup.startBackup'),
+      tempAccount: this.$mcf.getStorage('tempAccount'),
+      strMnemonic: '',
+      arrMnemonic: []
     }
   },
   methods: {
-    backup () {
-      this.$messagebox.prompt(' ', this.$t('page.trade.promptTitle'), { inputType: 'password', confirmButtonText: this.$t('page.trade.btnConfirm'), cancelButtonText: this.$t('page.trade.btnCancel') }).then(({ value, action }) => {
-        if (this.tempAccount.pwd === value) {
-          this.step = 2
-          this.mnemonic = this.tempAccount.mnemonic
+    nextStep() {
+      console.log(this.step)
+      if (this.step === 1) {
+        this.show = true
+      } else if (this.step === 2) {
+        this.step += 1
+        this.btnText = this.$t('user.backup.ok')
+      } else if (this.step === 3) {
+        if (this.strMnemonic === this.tempAccount.mnemonic) {
+          let accountList = this.$mcf.getStorage('accountList')
+          let accountInfo = {
+            name: this.tempAccount.name,
+            address: this.tempAccount.address,
+            pwdHints: this.tempAccount.pwdHints,
+            code: this.tempAccount.code
+          }
+          if (accountList.length === 0) {
+            localStorage.setItem('defaultAccount', JSON.stringify(accountInfo))
+          }
+          accountList.push(accountInfo)
+          localStorage.setItem('accountList', JSON.stringify(accountList))
+          localStorage.removeItem('tempAccount')
+          this.$notify({ type: 'success', message: this.$t('user.backup.text8') })
+          this.$router.push({ path: '/user/wallet' })
         } else {
-          this.$toast(this.$t('page.trade.toast2'))
+          this.$notify({ type: 'danger', message: this.$t('user.backup.text9') })
         }
-      })
+      }
     },
-    upsetWords () {
+    subCreate() {
+
+    },
+    confirm() {
+      if (this.password === this.tempAccount.password) {
+        this.step += 1
+        this.btnText = this.$t('user.backup.next')
+        this.$dialog.alert({
+          title: this.$t('user.backup.warning'),
+          message: this.$t('user.backup.text3'),
+          confirmButtonText: this.$t('common.btnConfirm')
+        })
+      } else {
+        this.$notify({ type: 'danger', message: this.$t('mcf.pwdError') })
+      }
+    },
+    resetWords() {
       this.strMnemonic = ''
       if (this.tempAccount.mnemonic) {
         this.arrMnemonic = this.tempAccount.mnemonic.trim().split(' ').sort(function () {
@@ -86,7 +106,7 @@ export default {
         x[i].classList.remove('select-item-disabled')
       }
     },
-    selectWord (word, index) {
+    selectWord(word, index) {
       document.getElementsByClassName('select-item')[index].disabled = true
       document.getElementsByClassName('select-item')[index].classList.add('select-item-disabled')
       if (this.strMnemonic.length === 0) {
@@ -95,189 +115,123 @@ export default {
         this.strMnemonic += ' ' + word
       }
     },
-    subCreate () {
-      let mnemonic = document.getElementById('str-mnemonic').innerHTML
-      // console.log(mnemonic)
-      // console.log(this.tempAccount.mnemonic)
-      if (mnemonic === this.tempAccount.mnemonic) {
-        this.$messagebox.confirm(this.$t('page.user.BackupText11'), this.$t('page.user.BackupText12'), { showCancelButton: false, confirmButtonText: this.$t('page.trade.btnConfirm') }).then(action => {
-          var isDefault = false
-          var code = encryptPwd(this.tempAccount.privateKey, this.tempAccount.pwd, this.salt)
-          var AccountList = JSON.parse(localStorage.getItem('AccountList')) || []
-          if (AccountList.length === 0) {
-            isDefault = true
-          }
-          var addressInfo = {
-            name: this.tempAccount.name,
-            address: this.tempAccount.address,
-            pt: this.tempAccount.pt,
-            code: code,
-            isDefault: isDefault
-          }
-          // console.log(addressInfo)
-          AccountList.push(addressInfo)
-          // console.log(AccountList)
-          localStorage.setItem('AccountList', JSON.stringify(AccountList))
-          this.$router.replace({ path: 'wallet' })
-        })
-      } else {
-        this.upsetWords()
-        this.$messagebox.alert(this.$t('page.user.BackupText10'), this.$t('page.user.BackupText9'), { confirmButtonText: this.$t('page.trade.btnConfirm') })
-      }
-    }
   },
-  computed: {
-    tempAccount () {
-      return this.$store.state.tempAccount
-    },
-    salt () {
-      return this.$store.getters.salt
-    }
-  },
-  watch: {
-    step (newValue, oldValue) {
-      this.active = 'step' + newValue
-      if (newValue === 2) {
-        this.$messagebox.confirm(this.$t('page.user.BackupText7'), this.$t('page.user.warning'), { showCancelButton: false, confirmButtonText: this.$t('page.trade.btnConfirm') }).then(action => {
-
-        })
-      }
-    }
-  },
-  created () {
+  created() {
     if (!this.tempAccount.address) {
       this.$router.push({ path: 'create' })
     } else {
-      this.upsetWords()
+      this.resetWords()
     }
   }
 }
 </script>
 
 <style lang="less" scoped>
+.backup {
+  padding: 0 5%;
+}
 .step {
-  padding: 20px 10px;
-  .btn-group {
-    width: 50%;
-    position: fixed;
-    bottom: 50px;
-    left: 25%;
+  margin-top: 16px;
+  text-align: center;
+}
+h3,
+h4 {
+  margin: 20px;
+}
+.step1 {
+  img {
+    width: 40%;
   }
-  .mcf-btn {
-    width: 100%;
+
+  p {
+    font-size: 13px;
+  }
+}
+.step2 {
+  .words {
+    text-align: left;
     margin-top: 20px;
+    word-spacing: 10px;
+    background-color: #fff9eb;
+    box-shadow: 0 2px 5px #888888;
+    padding: 10px;
+    line-height: 30px;
   }
-  h3,
-  h4 {
-    color: #888888;
-    text-align: center;
+}
+.step3 {
+  .words-box {
+    // word-spacing: 10px;
+    border: 1px solid #888888;
+    padding: 10px;
+    line-height: 30px;
+    min-height: 60px;
+    border-radius: 3px;
+    text-align: left;
   }
-  &.step1 {
-    text-align: center;
-    img {
-      width: 50%;
-    }
-    p {
-      font-size: 13px;
-      span {
-        color: #d64f4f;
-      }
-    }
-  }
-  &.step2 {
-    .warning {
-      // height: 60px;
-      border-radius: 3px;
-      box-shadow: 0 0 5px #888888;
-      margin-top: 30px;
-      position: relative;
-      .mark {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 20px;
-        background-color: #d64f4f;
-        border-radius: 3px;
-        div {
-          text-align: center;
-          width: 100%;
-          height: 100%;
-          display: table;
-          div {
-            font-size: 30px;
-            color: white;
-            display: table-cell;
-            vertical-align: middle;
-          }
-        }
-      }
-      .text {
-        font-size: 12px;
-        padding: 5px 5px 5px 30px;
-        p {
-          margin: 10px 0;
-          line-height: 13px;
-          span {
-            color: #d64f4f;
-            font-weight: 600;
-          }
-        }
-      }
-    }
-    .words {
-      text-align: left;
-      margin-top: 20px;
-      word-spacing: 10px;
-      background-color: #fff9eb;
-      box-shadow: 0 0 5px #888888;
-      padding: 10px;
-      line-height: 30px;
-    }
-  }
-  &.step3 {
-    .words-box {
-      word-spacing: 10px;
-      border: 1px solid #888888;
-      padding: 10px;
-      line-height: 30px;
-      height: 90px;
-    }
-    .words-select-box {
-      margin-top: 20px;
-      background-color: #fff9eb;
-      box-shadow: 0 0 5px #888888;
-      padding: 10px;
+  .words-select-box {
+    margin-top: 20px;
+    background-color: #fff9eb;
+    font-size: 13px;
+    box-shadow: 0 2px 5px #888888;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    .select-item {
+      width: 23%;
+      height: 30px;
+      margin: 1%;
+      background-color: #5b85ff;
+      color: white;
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      .select-item {
-        width: 23%;
-        height: 30px;
-        background-color: #5b85ff;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        margin: 1%;
-        border: 0px;
-        &.select-item-disabled {
-          background-color: #cecece;
-        }
+      border-radius: 3px;
+      &.select-item-disabled {
+        background-color: #cecece;
       }
     }
   }
 }
-
-// .words-select-box {
-//   margin-top: 20px;
-//   background-color: #fff9eb;
-//   box-shadow: 0 0 5px #888888;
-//   padding: 10px;
-//   display: flex;
-//   flex-wrap: wrap;
-//   justify-content: center;
-//   align-items: center;
-// }
+.btn {
+  position: fixed;
+  bottom: 20px;
+  width: 90%;
+}
+.password-input {
+  width: 76%;
+  margin: 10px 10%;
+  padding: 5px 2%;
+  outline-style: none;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+.tips {
+  position: relative;
+  padding: 10px 0px 10px 8%;
+  font-size: 12px;
+  border-radius: 10px;
+  text-align: left;
+  background-color: white;
+  box-shadow: 1px 1px 2px 1px rgba(0, 0, 0, 0.1);
+  &::before {
+    content: "!";
+    position: absolute;
+    left: 0;
+    padding-left: 3%;
+    font-size: 35px;
+    font-weight: bold;
+    color: red;
+    top: 50%;
+    transform: translate(0, -50%);
+  }
+  p {
+    margin: 10px 0;
+    line-height: 13px;
+    .warning {
+      color: red;
+    }
+  }
+}
 </style>

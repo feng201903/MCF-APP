@@ -1,150 +1,99 @@
 <template>
-  <div class="box">
-    <!-- {{tempAccount}} -->
-    <div class="warning">
-      <div class="mark">
-        <div>
-          <div>!</div>
-        </div>
-      </div>
-      <div class="text">
-        <p>{{$t('page.user.createText1')}} <span>{{$t('page.user.createText2')}}</span></p>
-        <p>MCF <span>{{$t('page.user.createText3')}}</span>{{$t('page.user.createText4')}}</p>
-      </div>
+  <div class="create">
+    <div class="tips">
+      <p>{{$t('user.create.text1')}} <span class="warning">{{$t('user.create.text2')}}</span></p>
+      <p>MCF <span class="warning">{{$t('user.create.text3')}}</span> {{$t('user.create.text4')}}</p>
     </div>
-    <div class="form">
-      <mt-field :placeholder="$t('page.user.walletName')" type="text" v-model="name" disableClear></mt-field>
-      <mt-field :placeholder="$t('page.user.password')" :type="inputType" v-model="pwd" disableClear><i class="iconfont icon-yanjing" @click="changeShowPwd"></i></mt-field>
-      <p>{{$t('page.user.passwordText')}}</p>
-      <mt-field :placeholder="$t('page.user.repeatPassword')" type="password" v-model="pwd2" disableClear></mt-field>
-      <mt-field :placeholder="$t('page.user.passwordReminder')" type="text" v-model="pt" disableClear></mt-field>
-      <button @click="create" class="mcf-btn btn-blue">{{$t('page.user.btnCreate')}}</button>
-    </div>
+    <van-form @submit="onSubmit" style="margin-top:20px">
+      <van-field v-model="name" name="name" :label="$t('user.create.walletName')" type="text" :placeholder="$t('user.create.enterName')" :rules="[{ required: true }]" />
+      <van-field v-model="password" name="password" :type="showPwd?'text':'password'" :rules="[
+          { required: true },
+          { pattern, message: $t('user.create.error1') }
+        ]" :label="$t('user.create.password')" right-icon="eye-o" @click-right-icon="showPwd=!showPwd" :placeholder="$t('user.create.enterPwd')" />
+      <van-field v-model="password2" name="password2" type="password" :label="$t('user.create.repeatPassword')" :placeholder="$t('user.create.enterRepeatPwd')" :rules="[
+          { required: true },
+          { validator: validatePassword, message: $t('user.create.error2') }
+        ]" />
+      <van-field v-model="pwdHints" name="pwdHints" :label="$t('user.create.passwordReminder')" :placeholder="$t('user.create.enterPasswordReminder')" />
+      <div style="margin: 16px;">
+        <van-button round block type="info" native-type="submit">{{$t('user.create.btnCreate')}}</van-button>
+      </div>
+    </van-form>
   </div>
 </template>
 
 <script>
-import { getAddress } from '@/assets/js/utils.js'
 export default {
-  data () {
+  data() {
     return {
       name: '',
-      pwd: '',
-      pwd2: '',
-      pt: '',
-      showPwd: false
-    }
-  },
-  computed: {
-    tempAccount () {
-      return this.$store.state.tempAccount
-    },
-    inputType () {
-      return this.showPwd ? 'text' : 'password'
+      password: '',
+      password2: '',
+      pwdHints: '',
+      showPwd: false,
+      pattern: /^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-ZW_!.@#$%^&*`~()-+=]+$)(?![a-z0-9]+$)(?![a-zW_!.@#$%^&*`~()-+=]+$)(?![0-9W_!.@#$%^&*`~()-+=]+$)[a-zA-Z0-9W_!.@#$%^&*`~()-+=]{8,24}$/
     }
   },
   methods: {
-    changeShowPwd () {
-      this.showPwd = !this.showPwd
-    },
-    create () {
-      var _this = this
-      var regex = new RegExp('^(?![a-zA-Z]+$)(?![A-Z0-9]+$)(?![A-ZW_!@#$%^&*`~()-+=]+$)(?![a-z0-9]+$)(?![a-zW_!@#$%^&*`~()-+=]+$)(?![0-9W_!@#$%^&*`~()-+=]+$)[a-zA-Z0-9W_!@#$%^&*`~()-+=]{8,24}$')
-      if (this.name === '' || this.pwd === '' || this.pwd2 === '') {
-        this.$toast(this.$t('page.user.createToast1'))
-        return
-      }
-      if (!regex.test(this.pwd)) {
-        this.$toast(this.$t('page.user.createToast2'))
-        return
-      }
-      if (this.pwd !== this.pwd2) {
-        this.$toast(this.$t('page.user.createToast3'))
-        return false
-      }
-      getAddress().then(function (res) {
-        // console.log(res)
+    async onSubmit(values) {
+      try {
+        let account = await this.$mcf.generateAddress()
+        let code = this.$mcf.encryptPwd(account.privateKey, values.password)
         let tempAccount = {
-          address: res.address,
-          mnemonic: res.mnemonic,
-          privateKey: res.privateKey,
-          pwd: _this.pwd,
-          name: _this.name,
-          pt: _this.pt
+          ...values,
+          ...account,
+          code
         }
-        // console.log(tempAccount)
-        _this.$store.commit('setTempAccount', tempAccount)
-        _this.$router.replace({ path: 'backup' })
-      })
+        console.log(tempAccount)
+        localStorage.setItem('tempAccount', JSON.stringify(tempAccount))
+        this.$router.push({ path: '/user/wallet/backup' })
+      } catch (error) {
+        console.log(error)
+        if (error.err_message) {
+          this.$notify({ type: 'danger', message: error.err_message })
+        }
+      }
+
+    },
+    validateMnemonic(value) {
+      let mnemo = new Mnemonic("english")
+      return mnemo.revertEntropy(value)
+    },
+    validatePassword() {
+      return this.password === this.password2
     }
-  }
+  },
 }
 </script>
 
 <style lang="less" scoped>
-.box {
-  width: 94%;
-  margin: auto;
-  .warning {
-    // height: 60px;
-    border-radius: 3px;
-    box-shadow: 0 0 5px #888888;
-    margin-top: 30px;
+.create {
+  padding-top: 16px;
+  .tips {
     position: relative;
-    .mark {
+    padding: 10px 0px 10px 8%;
+    margin: 0 5%;
+    font-size: 12px;
+    border-radius: 10px;
+    background-color: white;
+    box-shadow: 1px 1px 2px 1px rgba(0, 0, 0, 0.1);
+    &::before {
+      content: "!";
       position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 20px;
-      background-color: #d64f4f;
-      border-radius: 3px;
-      div {
-        text-align: center;
-        width: 100%;
-        height: 100%;
-        display: table;
-        div {
-          font-size: 30px;
-          color: white;
-          display: table-cell;
-          vertical-align: middle;
-        }
-      }
-    }
-    .text {
-      font-size: 12px;
-      padding: 5px 5px 5px 30px;
-      p {
-        margin: 10px 0;
-        line-height: 13px;
-        span {
-          color: #d64f4f;
-          font-weight: 600;
-        }
-      }
-    }
-  }
-  .form {
-    margin-top: 30px;
-    button {
-      width: 50%;
-      margin: 50px 25% 0;
+      left: 0;
+      padding-left: 3%;
+      font-size: 35px;
+      font-weight: bold;
+      color: red;
+      top: 50%;
+      transform: translate(0, -50%);
     }
     p {
-      color: #d64f4f;
-      font-size: 10px;
-    }
-    /deep/.mint-cell-wrapper {
-      border: 1px solid #888888;
-      border-radius: 3px;
-      margin-top: 20px;
-    }
-    /deep/.mint-field-other {
-      font-size: 12px;
-    }
-    .iconfont::before {
-      font-size: 16px;
-      color: #888888;
+      margin: 10px 0;
+      line-height: 13px;
+      .warning {
+        color: red;
+      }
     }
   }
 }

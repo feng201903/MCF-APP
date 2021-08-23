@@ -1,25 +1,23 @@
-const TerserPlugin = require("terser-webpack-plugin");
-
 module.exports = {
-  publicPath: "./",
-  productionSourceMap: false,
-  configureWebpack: {
-    externals: {
-      nacl_factory: "js-nacl"
-    },
-    optimization: {
-      minimizer: [
-        new TerserPlugin({
-          terserOptions: {
-            compress: {
-              warnings: false,
-              drop_debugger: true,
-              drop_console: true,
-              pure_funcs: ["console.log"]
-            }
-          }
-        })
-      ]
+  css: {
+    loaderOptions: {
+      stylus: {
+        'resolve url': true,
+        'import': []
+      }
     }
-  }
-};
+  },
+  pluginOptions: {
+    'cube-ui': {
+      postCompile: true,
+      theme: false
+    }
+  },
+  publicPath: './',
+  productionSourceMap: false,
+  configureWebpack: config => {
+    if (process.env.NODE_ENV === "production") {
+      config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true;
+    }
+  },
+}

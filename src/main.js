@@ -1,38 +1,35 @@
 import Vue from 'vue'
+import './cube-ui'
 import App from './App.vue'
 import router from './router'
-import store from './store'
-import Mint from 'mint-ui'
-import axios from 'axios'
-import VueAxios from 'vue-axios'
+import Vant from 'vant';
 import VueClipboard from 'vue-clipboard2'
 import VueI18n from 'vue-i18n'
+import api from './api/api'
+import mcf from '@/utils/mcf'
 
-import 'mint-ui/lib/style.css'
-// import '@/assets/css/iconfont/iconfont.css'
-import '@/assets/css/base.css'
+import 'vant/lib/index.css';
+import '@/assets/css/iconfont/iconfont.css'
+import '@/utils/appback.js'
 
+Vue.use(Vant);
 VueClipboard.config.autoSetContainer = true
-axios.defaults.baseURL = 'http://node7.mcfamily.io:9888/'
-
 Vue.use(VueClipboard)
-Vue.use(Mint)
-Vue.use(VueAxios, axios)
 Vue.use(VueI18n)
+Vue.prototype.$api = api
+Vue.prototype.$mcf = mcf
+Vue.config.productionTip = false
 
 const i18n = new VueI18n({
-  locale: 'zh',
+  locale: 'en',
   messages: {
     'zh': require('./lang/zh.js'),
     'en': require('./lang/en.js')
   }
 })
 
-Vue.config.productionTip = false
-
-new Vue({
-  router,
-  store,
+window.vm = new Vue({
   i18n,
+  router,
   render: h => h(App)
 }).$mount('#app')

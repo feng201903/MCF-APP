@@ -1,26 +1,26 @@
 <template>
   <div class="issue">
-    <p>批量转账、空投以及锁仓功能（锁仓功能在第二版本开放）</p>
-    <p>请到<span @click="doCopy">{{url}}</span>操作</p>
+    <p>{{$t('user.issue.text1')}}</p>
+    <p><span @click="doCopy">{{url}}</span></p>
   </div>
 </template>
 
 <script>
 export default {
-  data () {
+  data() {
     return {
       url: 'http://www.mcfamily.io'
     }
   },
   methods: {
-    doCopy: function (text) {
+    doCopy() {
       var _this = this
       this.$copyText(this.url).then(function (e) {
         console.log('复制成功！')
-        _this.$toast('复制成功')
+        _this.$toast(_this.url)
       }, function (e) {
         console.log('复制失败！')
-        _this.$toast('复制失败')
+        _this.$toast('copy error')
       })
     }
   }
@@ -33,6 +33,7 @@ export default {
   p {
     font-size: 14px;
     text-align: center;
+    padding: 5px 0;
     span {
       color: #5b85ff;
       border-bottom: 1px solid #5b85ff;

@@ -1,91 +1,101 @@
 <template>
-  <div class="message-list">
-    <ul>
-      <li v-for="item in messageList" :key="item.signature">
-        <div v-if="item.type === 'ISSUE_ASSET'">
-          <p>您发行的资产 {{item.assetName}} {{approvalStatus(item.approvalStatus)}}</p>
-          <p>发行总量:{{item.quantity}}</p>
-          <p class="time">{{format(item.timestamp)}}</p>
-        </div>
-        <div v-else @click="$router.push({ path: '/user/tdetail', query: { signature: item.signature}})">
-          <p>收付通知：{{item.amount}} {{item.assetName||"MCF"}} 收付成功</p>
-          <p class="time">{{format(item.timestamp)}}</p>
-        </div>
-      </li>
-    </ul>
+  <div>
+    <van-list v-model="loading" :finished="finished" :finished-text="$t('common.noData')" :loading-text="$t('common.loading')" @load="onLoad">
+      <van-cell v-for="item in message" @click="item.type!=='ISSUE_ASSET'?toDetail(item.signature):''" :key="item.signature" :title="messageInfo(item).title" :label="messageInfo(item).time" />
+    </van-list>
   </div>
 </template>
 
 <script>
-import { format } from '@/assets/js/utils.js'
 export default {
-  data () {
+  name: 'Message',
+  data() {
     return {
-      messageList: [],
-      AccountList: JSON.parse(localStorage.getItem('AccountList')) || []
+      list: [],
+      loading: false,
+      finished: false,
+      address: this.$mcf.getStorage('defaultAccount').address,
+      message: [],
+      page: 1
     }
   },
   methods: {
-    format (time) {
-      return format(time)
+    messageInfo(message) {
+      let title
+      let time = this.$mcf.format(message.timestamp)
+      switch (message.type) {
+        case "ISSUE_ASSET":
+          title = `${this.$t('user.message.issue')} ${message.assetName} ${this.approvalStatus(message.approvalStatus)}`
+          break;
+        case "PAYMENT":
+        case "TRANSFER_ASSET":
+          title = `${this.$t('user.message.message')}：${message.amount} ${message.assetName || "MCF"} ${this.$t('user.message.success')}`
+          break;
+        default:
+          break;
+      }
+      return {
+        title, time
+      }
     },
-    approvalStatus (sta) {
-      switch (sta) {
+    approvalStatus(status) {
+      switch (status) {
         case 'NOT_REQUIRED':
         case 'APPROVED':
-          return '已通过审核'
+          return this.$t('user.message.APPROVED')
         case 'PENDING':
-          return '待审核'
+          return this.$t('user.message.PENDING')
         case 'REJECTED':
         case 'EXPIRED':
         case 'INVALID':
-          return '未通过审核'
+          return this.$t('user.message.INVALID')
         default:
-          return '未知状态'
+          return 'error'
       }
     },
-    getMessage () {
-      var AccountList = this.AccountList
-      var aInfo
-      for (let i = 0, len = AccountList.length; i < len; i++) {
-        if (AccountList[i].isDefault === true) {
-          aInfo = AccountList[i]
-          break
+    async onLoad() {
+      // console.log("查询第" + this.page + "页")
+      try {
+        let message = (await this.$api.getMessage({
+          data: this.address,
+          page: this.page,
+          limit: 20
+        })).data
+        // console.log("第" + this.page + "页" + message.length + "条")
+        // console.log(message)
+        this.message = this.message.concat(message)
+        // console.log(this.message)
+        this.page += 1
+        let next = (await this.$api.getMessage({
+          data: this.address,
+          page: this.page,
+          limit: 20
+        })).data
+        // console.log("下一页第" + this.page + "页" + next.length + "条")
+        if (next.length === 0) {
+          // console.log("下一页无数据")
+          this.finished = true;
         }
-      }
-      this.axios.get('transactions/search?txType=PAYMENT&txType=ISSUE_ASSET&txType=TRANSFER_ASSET&address=' + aInfo.address + '&confirmationStatus=CONFIRMED&limit=50&reverse=true').then((response) => {
-        // console.log(response.data)
-        this.messageList = response.data
-      }).catch(function (error) {
+      } catch (error) {
         console.log(error)
-      })
+      } finally {
+        this.loading = false
+      }
+    },
+    toDetail(signature) {
+      this.$router.push({ path: '/user/wallet/detail', query: { signature } })
     }
   },
-  mounted () {
-    this.getMessage()
+  beforeRouteLeave(to, from, next) {
+    if (to.path.indexOf('detail') > -1) {
+      this.$emit('setKeepAlive', ['Message'])
+    } else {
+      this.$emit('setKeepAlive', [])
+    }
+    next()
   }
 }
 </script>
 
 <style lang="less" scoped>
-.message-list {
-  ul {
-    list-style: none;
-    padding: 0px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    li {
-      display: inline-block;
-      width: 100%;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-      p {
-        font-size: 14px;
-        margin: 10px;
-        &.time {
-          margin-bottom: 5px;
-          font-size: 12px;
-        }
-      }
-    }
-  }
-}
 </style>

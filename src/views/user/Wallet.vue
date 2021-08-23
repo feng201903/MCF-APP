@@ -1,112 +1,163 @@
 <template>
-  <div>
-    <!-- {{AccountList}} -->
-    <div class="list">
-      <list-item v-for="(item,key) in AccountDef" :key="key" :wallet="item" @setDefault="setDefault" @removeAddress="removeAddress" @toAssets="toAssets"></list-item>
+  <div class="wallet">
+    <van-empty v-show="accountList.length===0" :description="$t('common.noData')" />
+    <div class="card" v-for="item in accountList" :key="item.address" @click="toAssets(item.address)">
+      <div class="card-header">
+        <span class="card-header-name">{{item.name}}</span>
+        <span class="card-header-mark" v-if="item.address===defaultAccount.address">{{$t('user.wallet.CTW')}}</span>
+        <span class="card-header-mark" v-else @click.stop="setDefault(item)">{{$t('user.wallet.SCTW')}}</span>
+      </div>
+      <p class="card-body"><code>{{item.address}}</code></p>
+      <div class="card-footer">
+        {{accountBalance(item.address)}} MCF
+        <van-icon name="delete-o" color="red" @click.stop="remove(item)" size="20" />
+      </div>
+      <img src="@/assets/images/default-tags.png" v-if="item.address===defaultAccount.address">
     </div>
+
     <div class="btn">
-      <button @click="addAccount('create')" class="mcf-btn-a btn-blue">{{$t('page.user.btnCreate')}}</button>
-      <button @click="addAccount('import')" class="mcf-btn-a btn-blue">{{$t('page.user.btnImport')}}</button>
+      <van-button color="#5B85FF" @click="addAccount('wallet/create')">{{$t('user.wallet.create')}}</van-button>
+      <van-button color="#5B85FF" @click="addAccount('wallet/import')">{{$t('user.wallet.import')}}</van-button>
     </div>
   </div>
 </template>
 
 <script>
-import ListItem from '@/components/user/WalletListItem'
 export default {
-  data () {
+  data() {
     return {
-      AccountList: []
-    }
-  },
-  computed: {
-    AccountDef () {
-      var a = this.AccountList
-      return a.sort(function (a, b) {
-        if (a.isDefault) {
-          return -1
-        }
-      })
+      accountList: this.$mcf.getStorage('accountList'),
+      defaultAccount: this.$mcf.getStorage('defaultAccount'),
+      balance: []
     }
   },
   methods: {
-    addAccount (type) {
-      if (this.AccountList.length >= 5) {
-        this.$toast('钱包数量已达到上限')
-      } else {
+    addAccount(type) {
+      let accountList = this.$mcf.getStorage('accountList')
+      if (accountList.length < 5) {
         this.$router.push(type)
+      } else {
+        this.$notify({ type: 'danger', message: this.$t('user.wallet.pleaseRemove') })
       }
     },
-    setDefault (address) {
-      for (let i = 0; i < this.AccountList.length; i++) {
-        this.AccountList[i].isDefault = false
-        if (this.AccountList[i].address === address) {
-          this.AccountList[i].isDefault = true
-        }
-      }
-      localStorage.setItem('AccountList', JSON.stringify(this.AccountList))
+    setDefault(account) {
+      this.defaultAccount = account
+      localStorage.setItem('defaultAccount', JSON.stringify(account))
     },
-    removeAddress (address) {
-      console.log(address)
-      var AccountList = this.AccountList
-      if (AccountList.length <= 1) {
-        this.$toast('请至少保留一个钱包')
-        return
-      }
-      for (let i = 0, len = AccountList.length; i < len; i++) {
-        if (AccountList[i].address === address) {
-          console.log(address)
-          console.log(i)
-          AccountList.splice(i, 1)
-          break
-        }
-      }
-      localStorage.setItem('AccountList', JSON.stringify(AccountList))
-      localStorage.removeItem('assetIds-' + address)
-    },
-    toAssets (address) {
-      this.$router.push({ path: '/user/assets', query: { address: address } })
-    },
-    getAccountBalance () {
-      var urlAddress = ''
-      var AccountList = JSON.parse(localStorage.getItem('AccountList')) || []
-      for (let i = 0, len = AccountList.length; i < len; i++) {
-        urlAddress += 'address=' + AccountList[i].address + '&'
-      }
-      this.axios.get('assets/balances?' + urlAddress + 'assetid=0&limit=0&reverse=true').then((response) => {
-        // console.log(response.data)
-        for (let i = 0, len = AccountList.length; i < len; i++) {
-          for (let j = 0, len = response.data.length; j < len; j++) {
-            if (AccountList[i].address === response.data[j].address) {
-              AccountList[i].balance = response.data[j].balance
+    remove(account) {
+      this.$dialog.confirm({
+        title: this.$t('user.wallet.removeIt'),
+        message: account.address + this.$t('user.wallet.remove'),
+        confirmButtonText: this.$t('common.btnConfirm'),
+        cancelButtonText: this.$t('common.btnCancel')
+      })
+        .then(() => {
+          let accountList = this.accountList
+          for (let i = 0; i < accountList.length; i++) {
+            if (accountList[i].address === account.address) {
+              accountList.splice(i, 1)
+              if (account.address === this.defaultAccount.address) {
+                this.defaultAccount = accountList.length > 0 ? accountList[0] : {}
+              }
+              break;
             }
           }
-        }
-        this.AccountList = AccountList
-      }).catch((err) => {
-        console.log(err)
+          localStorage.setItem('defaultAccount', JSON.stringify(this.defaultAccount))
+          localStorage.setItem('accountList', JSON.stringify(accountList))
+        }).catch(() => {
+          console.log("cancel")
+        });
+    },
+    getBalance() {
+      console.log(this.accountList)
+      if (this.accountList.length > 0) {
+        this.$api.getAssetsBalances({ data: this.accountList }).then(res => {
+          // console.log(res)
+          this.balance = res.data
+        })
+      }
+    },
+    accountBalance(address) {
+      let res = this.balance.filter(item => {
+        return item.address === address
       })
+      // console.log(res)
+      return res.length === 1 ? res[0].balance : 0
+    },
+    toAssets(address) {
+      this.$router.push({ path: '/user/wallet/assets', query: { address: address } })
     }
   },
-  created () {
-    this.getAccountBalance()
+  mounted() {
+    this.getBalance();
   },
-  components: {
-    ListItem
-  }
 }
 </script>
 
 <style lang="less" scoped>
-.list {
-  margin-bottom: 70px;
-}
-.btn {
-  position: fixed;
-  bottom: 10px;
-  width: 100%;
-}
-.btn button {
-  width: 43%;
+.wallet {
+  overflow: scroll;
+  margin-top: 5px;
+  margin-bottom: 60px;
+  .card {
+    position: relative;
+    margin: 0 5% 15px;
+    padding: 10px 5%;
+    box-shadow: 2px 2px 3px 2px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    background-color: white;
+    .card-header {
+      span {
+        display: inline-block;
+        &.card-header-name {
+          width: 50%;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+        &.card-header-mark {
+          font-size: 12px;
+          color: #5b85ff;
+          position: absolute;
+          right: 7%;
+        }
+      }
+    }
+    .card-body {
+      font-size: 12px;
+      padding: 15px 0;
+    }
+    .card-footer {
+      font-size: 14px;
+      color: #ffbe4eb9;
+      margin: 0 -5%;
+      padding: 5px 5%;
+      text-align: right;
+      position: relative;
+      .van-icon {
+        position: absolute;
+        left: 4%;
+        top: 50%;
+        transform: translate(0, -50%);
+      }
+    }
+    img {
+      border-radius: 0 5px 0 0;
+      width: 30px;
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
+  }
+  .btn {
+    position: fixed;
+    display: flex;
+    justify-content: space-around;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px 10%;
+    // background-color: rgba(255, 255, 255, 1);
+  }
 }
 </style>
