@@ -1,10 +1,14 @@
 import nacl_factory from '@/assets/js/nacl_factory.min'
-import { Mnemonic } from '@/assets/js/jsbip39'
+import {
+    Mnemonic
+} from '@/assets/js/jsbip39'
 import Base58 from '@/assets/js/Base58.js'
 import SHA256 from '@/assets/js/sha256'
 import CryptoJS from 'crypto-js'
 import api from '@/api/api'
-import { Dialog } from 'cube-ui'
+import {
+    Dialog
+} from 'cube-ui'
 
 const mcf = (function () {
     let cachedPrivateKeys = []
@@ -15,13 +19,17 @@ const mcf = (function () {
                 let hexStr = mnemonic ? mnemo.revertEntropy(mnemonic) : nacl.to_hex(nacl.random_bytes(16))
                 // console.log(hexStr)
                 // if (!hexStr) return reject({ err_message: '助记词无效' })
-                if (!hexStr) return reject({ err_message: window.vm.$t('mcf.mnemonicError') })
+                if (!hexStr) return reject({
+                    err_message: window.vm.$t('mcf.mnemonicError')
+                })
                 mnemonic = mnemo.toMnemonic(nacl.from_hex(hexStr))
                 let privateKey = Base58.encode(nacl.crypto_hash_sha256(nacl.from_hex(hexStr)))
                 // console.log("privateKey:" + privateKey)
                 let publicKey = Base58.encode(nacl.crypto_sign_seed_keypair(nacl.crypto_hash_sha256(nacl.from_hex(hexStr))).signPk)
                 // console.log("publicKey:" + publicKey)
-                let _publicKey = typeof publicKey === "string" ? Base58.decode(publicKey) : reject({ err_message: window.vm.$t('mcf.publicKeyError') })
+                let _publicKey = typeof publicKey === "string" ? Base58.decode(publicKey) : reject({
+                    err_message: window.vm.$t('mcf.publicKeyError')
+                })
                 let publicKeyHashSHA256 = nacl.crypto_hash_sha256(_publicKey)
                 let publicKeyHashHex = nacl.to_hex(publicKeyHashSHA256)
                 let publicKeyHashWordArray = CryptoJS.enc.Hex.parse(publicKeyHashHex)
@@ -35,7 +43,10 @@ const mcf = (function () {
                 let address = Base58.encode(addressArray)
                 // console.log("address:" + address)
                 resolve({
-                    mnemonic, privateKey, publicKey, address
+                    mnemonic,
+                    privateKey,
+                    publicKey,
+                    address
                 })
             })
         })
@@ -43,18 +54,24 @@ const mcf = (function () {
 
     const transactions = async (txType, config) => {
         console.log(config)
-        let { creator } = config
+        let {
+            creator
+        } = config
         let privateKey = await getPrivateKey(creator, config.code)
         console.log(privateKey)
         return new Promise((resolve, reject) => {
-            api.getAddresses(creator, { showLoading: true }).then(res => {
+            api.getAddresses(creator, {
+                showLoading: true
+            }).then(res => {
                 let reference = res.data.reference
                 if (reference) {
                     console.log(reference)
                     nacl_factory.instantiate(function (nacl) {
                         let str = generateTransactionStr(nacl, txType, reference, privateKey, config)
                         console.log(str)
-                        api.transactionsProcess(str, { showLoading: true }).then(res => {
+                        api.transactionsProcess(str, {
+                            showLoading: true
+                        }).then(res => {
                             resolve(res.data)
                         }).catch(err => {
                             console.log(err)
@@ -62,7 +79,9 @@ const mcf = (function () {
                         })
                     })
                 } else {
-                    reject({ err_message: window.vm.$t('mcf.newAddressError') })
+                    reject({
+                        err_message: window.vm.$t('mcf.newAddressError')
+                    })
                 }
             })
         })
@@ -72,15 +91,21 @@ const mcf = (function () {
         console.log(address)
         return new Promise((resolve, reject) => {
             if (!address)
-                reject({ err_message: window.vm.$t('mcf.addressError') })
+                reject({
+                    err_message: window.vm.$t('mcf.addressError')
+                })
             if (cachedPrivateKeys[address]) {
                 resolve(cachedPrivateKeys[address])
             } else {
                 Dialog.$create({
                     type: 'prompt',
                     title: window.vm.$t('mcf.enterPwd'),
-                    confirmBtn: { text: window.vm.$t('common.btnConfirm') },
-                    cancelBtn: { text: window.vm.$t('common.btnCancel') },
+                    confirmBtn: {
+                        text: window.vm.$t('common.btnConfirm')
+                    },
+                    cancelBtn: {
+                        text: window.vm.$t('common.btnCancel')
+                    },
                     prompt: {
                         value: '',
                         placeholder: window.vm.$t('mcf.enterPwd'),
@@ -92,13 +117,17 @@ const mcf = (function () {
                             cachedPrivateKeys[address] = privateKey
                             resolve(privateKey)
                         } else {
-                            reject({ err_message: window.vm.$t('mcf.pwdError') })
+                            reject({
+                                err_message: window.vm.$t('mcf.pwdError')
+                            })
                         }
 
                     },
                     onCancel: () => {
                         document.querySelector('.cube-input-field').value = ''
-                        reject({ err_message: window.vm.$t('common.btnCancel') })
+                        reject({
+                            err_message: window.vm.$t('common.btnCancel')
+                        })
                     }
                 }).show()
             }
@@ -264,11 +293,7 @@ const mcf = (function () {
     }
 
     const strAddZero = (str, length) => {
-        var len = str.length;
-        for (var i = 0; i < length - len; i++) {
-            str = '0' + str;
-        }
-        return str;
+        return str.padStart(length, '0')
     }
 
     const getStorage = i => {
@@ -332,11 +357,19 @@ const mcf = (function () {
     }
 
     function numFormat(num, digits = 3) {
-        var si = [
-            { value: 1, symbol: "" },
+        var si = [{
+                value: 1,
+                symbol: ""
+            },
             // { value: 1E3, symbol: "K" },
-            { value: 1E6, symbol: "M" },
-            { value: 1E9, symbol: "B" }
+            {
+                value: 1E6,
+                symbol: "M"
+            },
+            {
+                value: 1E9,
+                symbol: "B"
+            }
         ];
         var rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
         var i;
@@ -386,5 +419,3 @@ const mcf = (function () {
 })();
 
 export default mcf;
-
-

@@ -41,7 +41,7 @@
     </van-dialog>
 
     <van-dialog v-model="isShowQrDialog" style="text-align:center;padding-top:10px">
-      <vue-qr :text="qrData" :margin="20" colorLight="#fff" :size="250"></vue-qr>
+      <vue-qr :text="address" :margin="20" colorLight="#fff" :size="250"></vue-qr>
       <code class="code-address" style=" display: block;font-size:13px;margin-bottom:10px;">{{address}}</code>
     </van-dialog>
   </div>

@@ -1,5 +1,5 @@
 const base = {
-    baseUrl: 'http://node7.mcfamily.cc:9888',
+    baseUrl: 'http://127.0.0.1:9888',
     getAllKnownAssets: '/assets?includeData=true&limit=0&offset=0&reverse=false',
     getAssetsTradesRecentSell: '/assets/trades/recent?otherassetid=0&limit=0&reverse=false',
     getAssetsTradesRecentBuy: '/assets/trades/recent?assetid=0&limit=0&reverse=false',
@@ -11,6 +11,7 @@ const base = {
     getMessage: '/transactions/search?txType=PAYMENT&txType=ISSUE_ASSET&txType=TRANSFER_ASSET&confirmationStatus=CONFIRMED&reverse=true&address=',
     getTransferRecordMcf: '/transactions/search?txType=PAYMENT&confirmationStatus=CONFIRMED&reverse=true&address=',
     getTransferRecordOther: '/assets/transfers/',
-    transactionsSignature:'/transactions/signature/'
+    transactionsSignature: '/transactions/signature/',
+    addressesValidate: '/addresses/validate/'
 }
 export default base

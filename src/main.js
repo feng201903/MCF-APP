@@ -21,7 +21,7 @@ Vue.prototype.$mcf = mcf
 Vue.config.productionTip = false
 
 const i18n = new VueI18n({
-  locale: 'en',
+  locale: 'zh',
   messages: {
     'zh': require('./lang/zh.js'),
     'en': require('./lang/en.js')

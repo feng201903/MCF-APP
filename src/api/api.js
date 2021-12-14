@@ -156,9 +156,9 @@ const api = {
         let limit = params.limit || 20
         let page = params.page || 1
         let offset = (page - 1) * limit
-        let url = params.type === 2
-            ? '/assets/trades/' + params.assetId + '/0?limit=' + limit + '&offset=' + offset + '&reverse=true'
-            : '/assets/trades/0/' + params.assetId + '?limit=' + limit + '&offset=' + offset + '&reverse=true'
+        let url = params.type === 2 ?
+            '/assets/trades/' + params.assetId + '/0?limit=' + limit + '&offset=' + offset + '&reverse=true' :
+            '/assets/trades/0/' + params.assetId + '?limit=' + limit + '&offset=' + offset + '&reverse=true'
         return axios.get(base.baseUrl + url)
     },
     //token买单
@@ -204,7 +204,11 @@ const api = {
         }
         // console.log(base.baseUrl + url)
         return axios.get(base.baseUrl + url)
-    }
+    },
+    //验证地址
+    addressesValidate(params) {
+        return axios.get(base.baseUrl + base.addressesValidate + params)
+    },
 }
 
 export default api
